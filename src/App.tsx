@@ -1,24 +1,57 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { useEffect, useState, useMemo } from "react";
+import Data from "./components/Data";
+import axios from "axios";
+import { IData } from "./models";
+
+import { Route, Routes, useSearchParams } from "react-router-dom";
+import SearchBar from "./components/SearchBar";
+import Pagination from "./components/Pagination";
+import Loader from "./components/Loader";
 
 function App() {
+  const [inputText, setInputText] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const pageParam = useMemo(
+    () => Number(searchParams.get("page")),
+    [searchParams]
+  );
+
+  const [items, setItems] = useState<IData[]>([]);
+  const [activePage, setActivePage] = useState<number>(pageParam);
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function fetchItems(id: number) {
+    setIsLoading(true);
+    const response = await axios.get<IData[]>(
+      `https://jsonplaceholder.typicode.com/posts?userId=${id}`
+    );
+    setItems(response.data);
+    setIsLoading(false);
+  }
+
+  useEffect(() => {
+    fetchItems(activePage);
+  }, [activePage]);
+
+  useEffect(() => {
+    setSearchParams({ page: `${activePage}` });
+  }, [activePage]);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="container mx-auto pt-5 max-w-6xl">
+      {isLoading && <Loader />}
+
+      <SearchBar setInputText={setInputText} />
+
+      <Routes>
+        <Route
+          path="/"
+          element={<Data inputText={inputText} items={items} />}
+        />
+      </Routes>
+
+      <Pagination setActivePage={setActivePage} activePage={activePage} />
     </div>
   );
 }
